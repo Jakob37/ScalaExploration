@@ -9,6 +9,6 @@ object Solution {
         val tax = meal_cost.toFloat * tax_percent.toFloat / 100
         val total_cost = meal_cost.toFloat + tip + tax
 
-        println(s"The total meal cost is ${total_cost.toInt} dollars.")
+        println(s"The total meal cost is ${Math.round(total_cost).toInt} dollars.")
     }
 }
