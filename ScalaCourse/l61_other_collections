@@ -1,0 +1,54 @@
+// Other sequences
+
+// Vector
+// More evenly balanced access patterns than list
+// Tree structure with 32 bits in each level, and many levels
+
+// Good index operation speed
+
+// Vector preferable for bulk operations
+
+
+// Appending, with colon pointing towards list
+x +: xs
+xs :+ x
+
+// Collection hierarchy
+
+* Iterables
+** Seq
+*** List
+*** Vectors
+** Set
+** Map
+** Range
+
+// String and Array are not subclasses to seq, but easily interchangable
+
+// Range
+1 to 5          // 1,2,3,4,5
+1 until 5       // 1,2,3,4
+1 to 10 by 3    // 1,4,7,10
+
+// Operations
+
+s exists (c => c.isUpper)
+List(1,2,3) zip s
+pairs.unzip
+
+xs.flatMap f // Applies to collection values, and return concatenated results)
+
+// Operations
+
+xs.sum
+xs.max
+
+// Exercise: Is prime
+
+def isPrime(n: Int): Boolean (2 until n) forall (d => n % d != 0)
+
+
+
+
+
+
