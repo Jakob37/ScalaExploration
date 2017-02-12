@@ -122,13 +122,215 @@ def f(a: Wire, b: Wire, c: Wire): Unit = {
 }
 ```
 
+### Implement event simulation
 
+```
+trait Simulation {
+    def currentTime: Int = ???
+    def afterDelay(delay: Int)(block: => Unit)
 
+}
+```
 
+Class hierarchy:
 
+* Top: Simulation
+* Gates (wire, AND, OR, INV)
+* Circuits (HA, adder)
+* My simulation
 
+### Wire operations
 
+* getSignal: Boolean 
+* setSignal(sig: Boolean): Unit
+* addAction(a: Action): Unit  # When wire changes, certain things can happen
 
+### Implementation of class Wire
+
+```{scala}
+class Wire {
+    private var sigVal = false
+    private var actions: List[Action] = List()
+    def getSignal: Boolean = sigVal
+    def setSignal(s: Boolean): Unit =
+        if (s != sigVal) {
+            sigVal = s
+            actions foreach (_())
+        }
+    def addAction(a: Action): Unit = {
+        actions = a :: actions
+        a()
+    }
+}
+```
+
+### What should the inverter do?
+
+* Installing action on its input wire
+* Action produces inverse of input signal on output wire
+* Change must be effective after delay of InverterDelay units of simulated time
+
+```{scala}
+def inverter(input: Wire, output: Wire): Unit = {
+
+    // Action to be applied to the input wire
+    def invertAction(): Unit = {
+        val inputSig = input.getSignal
+        afterDelay(inverterDelay) { output setSignal !inputSig }
+    }
+
+    // When input wire changes, apply action
+    input addAction invertAction
+}
+```
+
+### AND gate
+
+```{scala}
+def andGate(in1: Wire, in2: Wire, output: Wire): Unit = {
+    def andAction(): Unit = {
+        val in1Sig = in1.getSignal
+        val in2Sig = in2.getSignal
+        afterDelay(AndGateDelay) { output setSignal (in1Sig & in2Sig) }
+    }
+    in1 addAction andAction
+    in2 addAction andAction
+}
+```
+
+### Exercise - Calculating in1Sig and in2Sig inline instead of as values?
+
+Does not model OR gates faithfully.
+
+# Lecture: Discrete event simulation - Implementation and test
+
+## Simulation trait 
+
+```{scala}
+trait Simulation {
+    type Action = () => Unit
+    case class Event(time: Int, action: Action)
+    private type Agenda = List[Event]
+    private var agenda: Agenda = List()
+}
+```
+
+## Handling time
+
+Using private variable `curtime` containing current simulation time 
+`private var curtime = 0`.
+
+Can be accessed with getter function:
+
+```{scala}
+def currentTime: Int = curtime
+```
+
+Can be used:
+
+```{scala}
+Event(curtime + delay, () => block)
+```
+
+### Implementation of AfterDelay
+
+```{r}
+def afterDelay(delay: Int)(block: => Unit): Unit = {
+    val item = Event(currentTime + delay, () => block)
+    agenda = insert(agenda, item)
+}
+
+private def insert(ag: List[Event], item: Event): List[Event] = ag match {
+    case first :: rest if first.time <= item.time =>
+        first :: insert(rest, item)
+    case _ =>
+        item :: ag
+}
+```
+
+### Event handling loop
+
+```{scala}
+private def loop(): Unit = agenda match {
+    case first :: rest =>
+        agenda = rest
+        curtime = first.time
+        first.action()
+        loop()
+    case Nil =>
+}
+```
+
+### Run
+
+```{r}
+def run(): Unit = {
+    afterDelay(0) {
+        println("Simulation started!")
+    }
+    loop()
+}
+```
+
+### Probing wires
+
+```{scala}
+def probe(name: String, wire: Wire): Unit = {
+    def probeAction(): Unit = {
+        println(s"$name $currentTime value = ${wire.getSignal}")
+    }
+    wire addAction probeAction
+}
+```
+
+### Technology dependent parameters
+
+```{scala}
+trait Parameters {
+    def InverterDelay = 2
+    def AndGateDelay = 3
+    def OrGateDelay = 5
+}
+```
+
+# Run it!
+
+```{scala}
+object test {
+    println("Worksheet")
+    object sim extends Circuits with Parameters
+    import sim._
+    val in1, in2, sum, carry = new Wire
+    halfAdder(in1, in2, sum, carry)
+    probe("sum", sum)
+    probe("carry", carry)
+
+    in1 setSignal true
+    run()
+
+    in1 setSignal false
+    run()
+}
+```
+
+# Wrap
+
+## Variant gate
+
+Invertering inputs into AND gate, and finally inverting output.
+
+What happens: a + b => !(!a && !b)
+OR gate: a + b => !(!a || !b)
+
+```{engine='scala'}
+def orGateAlt(in1: Wire, in2: Wire, output: Wire): Unit = {
+    val notIn1, notIn2, notOut = new Wire
+    inverter(in1, notIn1)
+    inverter(in2, notIn2)
+    andGate(notIn1, notIn2, notOut)
+    inverter(notOut, output)
+}
+```
 
 
 
